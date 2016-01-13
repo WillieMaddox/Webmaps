@@ -1,14 +1,14 @@
 controlMousePos = new ol.control.MousePosition({
 	coordinateFormat: ol.coordinate.createStringXY(4),
-	});
+});
 
 popup = document.getElementById('popup');
 $('#popup-closer').on('click', function() {
 	overlayPopup.setPosition(undefined);
-	});
+});
 overlayPopup = new ol.Overlay({
 	element: popup
-	});
+});
 
 sourceVector = new ol.source.Vector({
 	loader: function(extent) {
@@ -20,38 +20,30 @@ sourceVector = new ol.source.Vector({
 				request: 'GetFeature',
 				typename: 'playa_sample',
 				srsname: 'EPSG:3857',
-				//cql_filter: "property='Value'",
-				//cql_filter: "BBOX(geometry," + extent.join(',') + ")",
 				bbox: extent.join(',') + ',EPSG:3857'
-				},
-			}).done(function(response) {
-				formatWFS = new ol.format.WFS(),
-				sourceVector.addFeatures(formatWFS.readFeatures(response))
-				});
-		},
-		strategy: ol.loadingstrategy.tile(new ol.tilegrid.XYZ({
-			maxZoom: 19
-			})),
-	});
+			},
+		}).done(function(response) {
+			formatWFS = new ol.format.WFS(),
+			sourceVector.addFeatures(formatWFS.readFeatures(response))
+		});
+	},
+	strategy: ol.loadingstrategy.tile(new ol.tilegrid.XYZ({
+		maxZoom: 19
+	})),
+});
 
 var layerVector = new ol.layer.Vector({
 	source: sourceVector
-	});
+});
 
 //hover highlight
 selectPointerMove = new ol.interaction.Select({
 	condition: ol.events.condition.pointerMove
-	});
+});
 
 layerOSM = new ol.layer.Tile({
 	source: new ol.source.OSM()
-	});
-
-layerOSM_BW = new ol.layer.Tile({
-	source: new ol.source.XYZ({
-		url : 'http://a.www.toolserver.org/tiles/bw-mapnik/{z}/{x}/{y}.png'
-		})
-	});
+});
 
 var map = new ol.Map({
 	target: 'map',
@@ -59,17 +51,11 @@ var map = new ol.Map({
 	controls: [controlMousePos],
 	layers: [layerOSM, layerVector],
 	view: new ol.View({
-		center: [-9692835,2347907],
+		center: [-9692835, 2347907],
 		zoom: 17
-		})
-	});
+	})
+});
 map.addInteraction(selectPointerMove);
-
-//function getCenterOfExtent(extent){
-//	x = extent[0] + (extent[2] - extent[0]) / 2;
-//	y = extent[1] + (extent[3] - extent[1]) / 2;
-//	return [x, y];
-//	}
 
 var interaction;
 var select = new ol.interaction.Select({
@@ -87,17 +73,17 @@ var formatGML = new ol.format.GML({
 	featureNS: 'http://argeomatica.com',
 	featureType: 'playa_sample',
 	srsName: 'EPSG:3857'
-	});
-var transactWFS = function(p,f) {
+});
+var transactWFS = function(p, f) {
 	switch(p) {
 	case 'insert':
-		node = formatWFS.writeTransaction([f],null,null,formatGML);
+		node = formatWFS.writeTransaction([f], null, null, formatGML);
 		break;
 	case 'update':
-		node = formatWFS.writeTransaction(null,[f],null,formatGML);
+		node = formatWFS.writeTransaction(null, [f], null, formatGML);
 		break;
 	case 'delete':
-		node = formatWFS.writeTransaction(null,null,[f],formatGML);
+		node = formatWFS.writeTransaction(null, null, [f], formatGML);
 		break;
 	}
 	s = new XMLSerializer();
@@ -108,15 +94,13 @@ var transactWFS = function(p,f) {
 		processData: false,
 		contentType: 'text/xml',
 		data: str
-		}).done();
+	}).done();
 }
 
 $('.btn-floating').hover(
-		function() {
-			$(this).addClass('darken-2');},
-		function() {
-			$(this).removeClass('darken-2');}
-		);
+	function() {$(this).addClass('darken-2');},
+	function() {$(this).removeClass('darken-2');}
+);
 
 $('.btnMenu').on('click', function(event) {
 	$('.btnMenu').removeClass('orange');
@@ -130,7 +114,7 @@ $('.btnMenu').on('click', function(event) {
 		interaction = new ol.interaction.Select({
 			style: new ol.style.Style({
 				stroke: new ol.style.Stroke({color: '#f50057', width: 2})
-				})
+			})
 		});
 		map.addInteraction(interaction);
 		interaction.getFeatures().on('add', function(e) {
@@ -139,27 +123,27 @@ $('.btnMenu').on('click', function(event) {
 			if (props.tiendas){$('#popup-tiendas').html(props.tiendas);}else{$('#popup-tiendas').html('n/a');}
 			coord = $('.ol-mouse-position').html().split(',');
 			overlayPopup.setPosition(coord);
-			});
+		});
 		break;
 		
 	case 'btnEdit':
 		map.addInteraction(select);
 		interaction = new ol.interaction.Modify({
 			features: select.getFeatures()
-			});
+		});
 		map.addInteraction(interaction);
 		
 		snap = new ol.interaction.Snap({
 			source: layerVector.getSource()
-			});
+		});
 		map.addInteraction(snap);
 		
 		dirty = {};
 		select.getFeatures().on('add', function(e) {
 			e.element.on('change', function(e) {
 				dirty[e.target.getId()] = true;
-				});
 			});
+		});
 		select.getFeatures().on('remove', function(e) {
 			f = e.element;
 			if (dirty[f.getId()]){
@@ -168,9 +152,9 @@ $('.btnMenu').on('click', function(event) {
 			    delete featureProperties.boundedBy;
 			    var clone = new ol.Feature(featureProperties);
 			    clone.setId(f.getId());
-			    transactWFS('update',clone);
-				}
-			});
+			    transactWFS('update', clone);
+			}
+		});
 		break;
 		
 	case 'btnDrawPoint':
@@ -180,7 +164,7 @@ $('.btnMenu').on('click', function(event) {
 		});
 		map.addInteraction(interaction);
 		interaction.on('drawend', function(e) {
-			transactWFS('insert',e.feature);
+			transactWFS('insert', e.feature);
 	    });
 		break;
 		
@@ -191,7 +175,7 @@ $('.btnMenu').on('click', function(event) {
 		});
 		map.addInteraction(interaction);
 		interaction.on('drawend', function(e) {
-			transactWFS('insert',e.feature);
+			transactWFS('insert', e.feature);
 	    });
 		break;
 		
@@ -202,7 +186,7 @@ $('.btnMenu').on('click', function(event) {
 		});
 		map.addInteraction(interaction);
 		interaction.on('drawend', function(e) {
-			transactWFS('insert',e.feature);
+			transactWFS('insert', e.feature);
 	    });
 		break;
 		
@@ -210,7 +194,7 @@ $('.btnMenu').on('click', function(event) {
 		interaction = new ol.interaction.Select();
 		map.addInteraction(interaction);
 		interaction.getFeatures().on('change:length', function(e) {
-			transactWFS('delete',e.target.item(0));
+			transactWFS('delete', e.target.item(0));
 	        interaction.getFeatures().clear();
 	        selectPointerMove.getFeatures().clear();
 	    });
@@ -219,16 +203,16 @@ $('.btnMenu').on('click', function(event) {
 	default:
 		break;
 	}
-	});
+});
 
 $('#btnZoomIn').on('click', function() {
 	var view = map.getView();
 	var newResolution = view.constrainResolution(view.getResolution(), 1);
 	view.setResolution(newResolution);
-	});
+});
 
 $('#btnZoomOut').on('click', function() {
 	var view = map.getView();
 	var newResolution = view.constrainResolution(view.getResolution(), -1);
 	view.setResolution(newResolution);
-	});
+});
