@@ -1,13 +1,13 @@
 controlMousePos = new ol.control.MousePosition({
-    coordinateFormat: ol.coordinate.createStringXY(4),
+	coordinateFormat: ol.coordinate.createStringXY(4),
 });
 
 popup = document.getElementById('popup');
 $('#popup-closer').on('click', function() {
-    overlayPopup.setPosition(undefined);
+	overlayPopup.setPosition(undefined);
 });
 overlayPopup = new ol.Overlay({
-    element: popup
+	element: popup
 });
 
 var formatWFS = new ol.format.WFS();
@@ -47,11 +47,11 @@ var layerWFS = new ol.layer.Vector({
 
 //hover highlight
 selectPointerMove = new ol.interaction.Select({
-    condition: ol.events.condition.pointerMove
+	condition: ol.events.condition.pointerMove
 });
 
 layerOSM = new ol.layer.Tile({
-    source: new ol.source.OSM()
+	source: new ol.source.OSM()
 });
 
 var map = new ol.Map({
@@ -68,11 +68,11 @@ map.addInteraction(selectPointerMove);
 
 var interaction;
 var select = new ol.interaction.Select({
-    style: new ol.style.Style({
-        stroke: new ol.style.Stroke({
-            color: '#FF2828'
-        })
-    })
+	style: new ol.style.Style({
+		stroke: new ol.style.Stroke({
+			color: '#FF2828'
+		})
+	})
 });
 
 //wfs-t
@@ -140,8 +140,8 @@ var transactWFS = function(p, f) {
 }
 
 $('.btn-floating').hover(
-    function() { $(this).addClass('darken-2'); },
-    function() { $(this).removeClass('darken-2'); }
+	function() { $(this).addClass('darken-2'); },
+	function() { $(this).removeClass('darken-2'); }
 );
 
 $('.btnMenu').on('click', function(event) {
@@ -252,13 +252,13 @@ $('.btnMenu').on('click', function(event) {
 });
 
 $('#btnZoomIn').on('click', function() {
-    var view = map.getView();
-    var newResolution = view.constrainResolution(view.getResolution(), 1);
-    view.setResolution(newResolution);
+	var view = map.getView();
+	var newResolution = view.constrainResolution(view.getResolution(), 1);
+	view.setResolution(newResolution);
 });
 
 $('#btnZoomOut').on('click', function() {
-    var view = map.getView();
-    var newResolution = view.constrainResolution(view.getResolution(), -1);
-    view.setResolution(newResolution);
+	var view = map.getView();
+	var newResolution = view.constrainResolution(view.getResolution(), -1);
+	view.setResolution(newResolution);
 });
