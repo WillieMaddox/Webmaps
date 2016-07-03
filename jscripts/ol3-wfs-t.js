@@ -10,7 +10,17 @@ overlayPopup = new ol.Overlay({
     element: popup
 });
 
-sourceVector = new ol.source.Vector({
+var formatWFS = new ol.format.WFS();
+
+var formatGML = new ol.format.GML({
+    featureNS: 'http://argeomatica.com',
+    featureType: 'playa_sample',
+    srsName: 'EPSG:3857'
+});
+
+xs = new XMLSerializer();
+
+sourceWFS = new ol.source.Vector({
     loader: function(extent) {
         $.ajax('http://geoserver-dbauszus.rhcloud.com/wfs', {
             type: 'GET',
@@ -23,17 +33,16 @@ sourceVector = new ol.source.Vector({
                 bbox: extent.join(',') + ',EPSG:3857'
             },
         }).done(function(response) {
-            formatWFS = new ol.format.WFS(),
-                sourceVector.addFeatures(formatWFS.readFeatures(response))
+            sourceWFS.addFeatures(formatWFS.readFeatures(response))
         });
     },
-    strategy: ol.loadingstrategy.tile(new ol.tilegrid.XYZ({
+    strategy: ol.loadingstrategy.tile(new ol.tilegrid.createXYZ({
         maxZoom: 19
     })),
 });
 
-var layerVector = new ol.layer.Vector({
-    source: sourceVector
+var layerWFS = new ol.layer.Vector({
+    source: sourceWFS
 });
 
 //hover highlight
@@ -49,7 +58,7 @@ var map = new ol.Map({
     target: 'map',
     overlays: [overlayPopup],
     controls: [controlMousePos],
-    layers: [layerOSM, layerVector],
+    layers: [layerOSM, layerWFS],
     view: new ol.View({
         center: [-9692835, 2347907],
         zoom: 17
@@ -68,12 +77,6 @@ var select = new ol.interaction.Select({
 
 //wfs-t
 var dirty = {};
-var formatWFS = new ol.format.WFS();
-var formatGML = new ol.format.GML({
-    featureNS: 'http://argeomatica.com',
-    featureType: 'playa_sample',
-    srsName: 'EPSG:3857'
-});
 var transactWFS = function(p, f) {
     switch (p) {
         case 'insert':
@@ -86,14 +89,53 @@ var transactWFS = function(p, f) {
             node = formatWFS.writeTransaction(null, null, [f], formatGML);
             break;
     }
-    s = new XMLSerializer();
-    str = s.serializeToString(node);
+
+    if (f === undefined) {
+    	console.log(p, f)
+    } else {
+    	console.log(p, f.getId())
+    }
+
+    payload = xs.serializeToString(node);
+    console.log('**', payload);
+    function responseCallback(response) {
+    	var tr = formatWFS.readTransactionResponse(response);
+    	ts = tr.transactionSummary;
+        fid = tr.insertIds;
+        console.log('****', ts, fid);
+        
+        switch (p) {
+    		case 'insert':
+    			if (ts.totalInserted === 1 && fid.length === 1 && fid[0] !== 'none') {
+        			f.setId(fid[0])
+    			}
+				break;
+    		case 'update':
+    			break;
+    		case 'delete':
+    			if (ts.totalDeleted === 1 && fid.length === 1 && fid[0] === 'none') {
+			    	sourceWFS.removeFeature(f);		            
+    			}
+    			break;
+    	}
+    }
     $.ajax('http://geoserver-dbauszus.rhcloud.com/wfs', {
         type: 'POST',
         dataType: 'xml',
         processData: false,
         contentType: 'text/xml',
-        data: str
+        complete: function(xhr, status) {
+        	if (status === 'success') {
+        		responseCallback(xhr.responseXML)
+        	} else {
+        		console.log('STATUS ERROR', status)
+        	}
+        },
+	    error: function(e) {
+	    	var errorMsg = e? (e.status + ' ' + e.statusText) : "";
+	    },
+    
+        data: payload
     }).done();
 }
 
@@ -123,6 +165,7 @@ $('.btnMenu').on('click', function(event) {
                 if (props.tiendas) { $('#popup-tiendas').html(props.tiendas); } else { $('#popup-tiendas').html('n/a'); }
                 coord = $('.ol-mouse-position').html().split(',');
                 overlayPopup.setPosition(coord);
+                console.log(e.element.getId())
             });
             break;
 
@@ -134,7 +177,7 @@ $('.btnMenu').on('click', function(event) {
             map.addInteraction(interaction);
 
             snap = new ol.interaction.Snap({
-                source: layerVector.getSource()
+                source: layerWFS.getSource()
             });
             map.addInteraction(snap);
 
@@ -160,7 +203,7 @@ $('.btnMenu').on('click', function(event) {
         case 'btnDrawPoint':
             interaction = new ol.interaction.Draw({
                 type: 'Point',
-                source: layerVector.getSource()
+                source: layerWFS.getSource()
             });
             map.addInteraction(interaction);
             interaction.on('drawend', function(e) {
@@ -171,7 +214,7 @@ $('.btnMenu').on('click', function(event) {
         case 'btnDrawLine':
             interaction = new ol.interaction.Draw({
                 type: 'LineString',
-                source: layerVector.getSource()
+                source: layerWFS.getSource()
             });
             map.addInteraction(interaction);
             interaction.on('drawend', function(e) {
@@ -182,7 +225,7 @@ $('.btnMenu').on('click', function(event) {
         case 'btnDrawPoly':
             interaction = new ol.interaction.Draw({
                 type: 'Polygon',
-                source: layerVector.getSource()
+                source: layerWFS.getSource()
             });
             map.addInteraction(interaction);
             interaction.on('drawend', function(e) {
@@ -193,10 +236,13 @@ $('.btnMenu').on('click', function(event) {
         case 'btnDelete':
             interaction = new ol.interaction.Select();
             map.addInteraction(interaction);
-            interaction.getFeatures().on('change:length', function(e) {
-                transactWFS('delete', e.target.item(0));
-                interaction.getFeatures().clear();
-                selectPointerMove.getFeatures().clear();
+            // interaction.getFeatures().on('change:length', function(e) {
+            interaction.on('select', function(e) {
+                if (e.selected.length == 1) {
+                	transactWFS('delete', e.selected[0]);
+			        interaction.getFeatures().clear();
+			        selectPointerMove.getFeatures().clear();
+            	}                
             });
             break;
 
